@@ -1,0 +1,13 @@
+[package]
+name = "zkreserves_contracts"
+version = "0.1.0"
+edition = "2024_07"
+
+[lib]
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
+
+[dependencies]
+starknet = ">=2.9.0"
