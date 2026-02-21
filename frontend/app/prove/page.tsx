@@ -43,6 +43,7 @@ export default function ProvePage() {
 
     const [step, setStep] = useState<Step>(1);
     const [btcAddresses, setBtcAddresses] = useState("");
+    const [assetType, setAssetType] = useState("BTC");
     const [balances, setBalances] = useState<any[]>([]);
     const [blockHeight, setBlockHeight] = useState<number>(0);
     const [csvContent, setCsvContent] = useState("");
@@ -97,17 +98,29 @@ export default function ProvePage() {
         }
     }, [entityInfo]);
 
-    // ── Step 1: Fetch BTC balances ─────────────────────────────────────────────
+    // ── Step 1: Fetch Balances ─────────────────────────────────────────────
     async function handleFetchBalances() {
         const addrs = btcAddresses.split("\n").map(a => a.trim()).filter(Boolean);
-        if (addrs.length === 0) { setError("Enter at least one Bitcoin address"); return; }
+        if (addrs.length === 0) { setError("Enter at least one wallet address"); return; }
         setError("");
         setLoading(true);
         try {
-            const isTestnet = addrs.every(a => a.startsWith("tb1") || a.startsWith("m") || a.startsWith("n"));
-            const [bals, height] = await Promise.all([getMultipleBalances(addrs), getCurrentBlockHeight(isTestnet)]);
-            setBalances(bals);
-            setBlockHeight(height);
+            if (assetType === "BTC") {
+                const isTestnet = addrs.every(a => a.startsWith("tb1") || a.startsWith("m") || a.startsWith("n"));
+                const [bals, height] = await Promise.all([getMultipleBalances(addrs), getCurrentBlockHeight(isTestnet)]);
+                setBalances(bals);
+                setBlockHeight(height);
+            } else {
+                await new Promise(r => setTimeout(r, 1200));
+                const mockBalances = addrs.map((addr) => ({
+                    address: addr,
+                    balance: Math.floor(Math.random() * 500000000000) + 1000000000,
+                    satoshi: Math.floor(Math.random() * 500000000000) + 1000000000,
+                }));
+                const mockBlockHeight = assetType === "SOL" ? 250000000 : 19200000 + Math.floor(Math.random() * 1000);
+                setBlockHeight(mockBlockHeight);
+                setBalances(mockBalances);
+            }
             if (entityInfo) localStorage.setItem(`btc_addresses_${entityInfo.id}`, btcAddresses);
             setStep(2);
         } catch (e: any) {
@@ -272,11 +285,20 @@ export default function ProvePage() {
                                     Your previously used cold wallet addresses are pre-filled. Update them if needed.
                                 </p>
                                 <div className="field mb-4">
-                                    <label className="label">Wallet Addresses (BTC, ETH, etc. - one per line)</label>
+                                    <label className="label">Select Digital Asset</label>
+                                    <select className="input input-mono" value={assetType} onChange={e => setAssetType(e.target.value)} style={{ appearance: "auto", paddingRight: 32 }}>
+                                        <option value="BTC">Bitcoin (BTC) - via Xverse API</option>
+                                        <option value="ETH">Ethereum (ETH) - Mocked for Demo</option>
+                                        <option value="USDC">USD Coin (USDC) - Mocked for Demo</option>
+                                        <option value="SOL">Solana (SOL) - Mocked for Demo</option>
+                                    </select>
+                                </div>
+                                <div className="field mb-4">
+                                    <label className="label">Wallet Addresses ({assetType} - one per line)</label>
                                     <textarea
                                         className="input input-mono"
                                         rows={5}
-                                        placeholder={"bc1qxxx...\nbc1qyyy..."}
+                                        placeholder={`bc1qxxx...\n0xabc123...`}
                                         value={btcAddresses}
                                         onChange={(e) => setBtcAddresses(e.target.value)}
                                     />
@@ -303,9 +325,9 @@ export default function ProvePage() {
                                 <div className="card card-tight mb-4" style={{ background: "var(--surface-2)" }}>
                                     <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Total reserves fetched</div>
                                     <div style={{ fontFamily: "var(--mono)", fontSize: 20, fontWeight: 700, color: "var(--green)" }}>
-                                        {satoshiToBTC(totalBTC)} BTC
+                                        {satoshiToBTC(totalBTC)} {assetType}
                                     </div>
-                                    <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>Block height #{blockHeight.toLocaleString()}</div>
+                                    <div style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 2 }}>{assetType} network block height #{blockHeight.toLocaleString()}</div>
                                 </div>
 
                                 <div className="field mb-3">
