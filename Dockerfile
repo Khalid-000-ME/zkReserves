@@ -1,53 +1,35 @@
-# ========================================================
-# TRUE ZK PROVING ENVIRONMENT (RAILWAY READY)
-# ========================================================
-# This Dockerfile merges Node.js with the raw cryptographic 
-# CPU execution engines built by StarkWare and LambdaClass.
+# zkReserves — Prover API
+# Uses Scarb 2.16.0 which ships with the Stwo STARK prover natively.
+# No Rust compilation, no Docker-in-Docker, no Python virtualenv needed.
 
-# Stage 1: Build robust trace execution engine (cairo1-run) from source!
-FROM rust:slim-bullseye AS trace-builder
-RUN apt-get update && apt-get install -y git
-# We natively compile cairo1-run from a stable explicitly pinned release tag
-RUN cargo install --git https://github.com/lambdaclass/cairo-vm.git --tag v3.0.1 cairo1-run
-
-# Stage 2: Base Node.js image combined with STARK engines
 FROM node:20-bullseye-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    jq \
-    bash \
-    coreutils \
+# Install curl (needed to download Scarb)
+RUN apt-get update && apt-get install -y curl bash coreutils jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Starknet Scarb Compiler globally
-RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh -s -- -p
-ENV PATH /root/.local/bin:$PATH
+# Install Scarb 2.16.0 (bundled with Stwo prover + scarb-execute + scarb-prove + scarb-verify)
+ENV SCARB_VERSION=2.16.0
+RUN curl -fsSL https://github.com/software-mansion/scarb/releases/download/v${SCARB_VERSION}/scarb-v${SCARB_VERSION}-x86_64-unknown-linux-gnu.tar.gz \
+    | tar -xz -C /usr/local/bin --strip-components=2 scarb-v${SCARB_VERSION}-x86_64-unknown-linux-gnu/bin/
 
-# Copy compiled cairo1-run trace execution engine from Stage 1
-COPY --from=trace-builder /usr/local/cargo/bin/cairo1-run /usr/local/bin/cairo-run
-RUN chmod +x /usr/local/bin/cairo-run
+# Verify Scarb + Stwo tools are available
+RUN scarb --version && scarb-prove --version && scarb-verify --version
 
-# Download the massive C++ STARK Prover and Verifier directly from DipDup open source releases (bypassing lambdaclass image bugs)
-RUN curl -L https://github.com/dipdup-io/stone-packaging/releases/download/v3.0.3/cpu_air_prover-x86_64 -o /usr/local/bin/cpu_prover
-RUN chmod +x /usr/local/bin/cpu_prover
+WORKDIR /app
 
-RUN curl -L https://github.com/dipdup-io/stone-packaging/releases/download/v3.0.3/cpu_air_verifier-x86_64 -o /usr/local/bin/cpu_verifier
-RUN chmod +x /usr/local/bin/cpu_verifier
+# Copy and install Node.js dependencies
+COPY prover_api/package*.json ./
+RUN npm ci --only=production
 
-# Setup Application working directory
-WORKDIR /app/prover_api
+# Copy the Express server
+COPY prover_api/server.js ./
 
-# Copy API dependencies
-COPY prover_api/package.json ./
-RUN npm install
+# Copy the Cairo circuit (source + compiled targets)
+COPY circuit/ ./circuit/
 
-# Copy source repos so the API can reach into the circuit logic!
-COPY prover_api/ ./
-COPY circuit/ /app/circuit/
+# Pre-build the circuit so the first request doesn't pay compilation overhead
+RUN cd circuit && scarb build
 
-# Expose Railway Port
 EXPOSE 8080
-
 CMD ["node", "server.js"]

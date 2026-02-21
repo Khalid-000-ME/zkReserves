@@ -16,3 +16,4 @@
 pub mod merkle;
 pub mod constraints;
 pub mod band;
+pub mod main;

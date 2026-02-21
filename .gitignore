@@ -35,4 +35,6 @@ page.tsx.bak
 !README.md
 
 *.log
-prover_api/prover.log
+prover_api/prover.logcircuit/target/
+exectest/
+*.bin

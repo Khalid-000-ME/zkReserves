@@ -3,7 +3,14 @@ name = "zkreserves_circuit"
 version = "0.1.0"
 edition = "2024_07"
 
+[[target.executable]]
+name = "zkreserves"
+function = "zkreserves_circuit::main::main"
+
 [lib]
 
 [dependencies]
-starknet = ">=2.15.0"
+cairo_execute = "2.16.0"
+
+[cairo]
+enable-gas = false

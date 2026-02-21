@@ -1,66 +1,59 @@
 #!/bin/bash
-set -e
-
 # ==============================================================================
-# TRUE ZK RUNNER
+# zkReserves — True ZK Proving Pipeline using Scarb + Stwo
 # ==============================================================================
-# This script orchestrates the generation of an off-chain ZK-STARK proof 
-# using native cairo1-run and LambdaClass stone-prover.
+# Called by prover_api/server.js with:
+#   ARGUMENTS  env var  — serialised felt252 array for the circuit
+#   PROOF_OUT  env var  — output path for the proof file (default: proof.json)
 # ==============================================================================
+set -eo pipefail
 
-echo ">> WRITING PROVER CONFIGURATIONS..."
-cat << 'EOF' > cpu_air_params.json
-{
-    "field": "PrimeB",
-    "stark": {
-        "fri": {
-            "fri_step_list": [0, 4, 3],
-            "last_layer_degree_bound": 64,
-            "n_queries": 18,
-            "proof_of_work_bits": 24
-        },
-        "log_n_cosets": 4
-    }
-}
-EOF
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$SCRIPT_DIR"
 
-cat << 'EOF' > cpu_air_prover_config.json
-{
-    "constraint_polynomial_task_size": 256,
-    "n_out_of_memory_merkle_layers": 1,
-    "store_full_l_deform": false,
-    "table_prover_params": {
-        "table_n_tasks": 1
-    }
-}
-EOF
+ARGUMENTS="${ARGUMENTS:-[]}"
+PROOF_OUT="${PROOF_OUT:-proof.json}"
 
-echo ">> COMPILING MAIN CIRCUIT TO SIERRA..."
-scarb --release build
+echo ">> [1/4] Compiling circuit with Scarb..."
+scarb build
 
-CASM_FILE="target/release/zkreserves_circuit.sierra.json"
+echo ">> [2/4] Executing circuit (scarb-execute) to produce execution trace..."
+# scarb-execute runs the #[executable] function and writes
+# an execution trace to target/execute/<pkg>/<id>/
+EXEC_OUTPUT=$(scarb execute \
+  --executable-name zkreserves \
+  --arguments "$ARGUMENTS" \
+  --output standard \
+  --json 2>&1)
 
-if [ ! -f "$CASM_FILE" ]; then
-    echo ">> [ERROR] Sierra binary failed to compile. Please check circuit constraints."
-    exit 1
+echo "$EXEC_OUTPUT"
+
+# Extract the execution-id from the JSON output
+EXECUTION_ID=$(echo "$EXEC_OUTPUT" | grep -o '"execution_id":"[^"]*"' | head -1 | cut -d'"' -f4)
+if [ -z "$EXECUTION_ID" ]; then
+  # Fallback: find the latest execution directory
+  EXEC_DIR=$(ls -td target/execute/zkreserves_circuit/*/ 2>/dev/null | head -1)
+  EXECUTION_ID=$(basename "$EXEC_DIR")
 fi
 
-echo ">> GENERATING CAIRO TRACE AND MEMORY DUMP (cairo1-run)..."
-# We use cairo1-run which accepts the sierra constraints natively
-cairo-run \
-  $CASM_FILE \
-  --proof_mode \
-  --trace_file zkreserves_trace.bin \
-  --memory_file zkreserves_memory.bin \
-  --air_public_input public_input.json \
-  --args "private_input.json"
+echo "   Execution ID: $EXECUTION_ID"
 
-echo ">> GENERATING MATHEMATICAL ZK-STARK ( STONE PROVER )" 
-cpu_prover \
-  --parameter_file=cpu_air_params.json \
-  --prover_config_file=cpu_air_prover_config.json \
-  --public_input_file=public_input.json \
-  --private_input_file=private_input.json \
-  --out_file=stark_proof.json
+echo ">> [3/4] Generating Stwo STARK proof (scarb-prove)..."
+scarb prove \
+  --executable-name zkreserves \
+  --execution-id "$EXECUTION_ID"
 
-echo ">> PROOF GENERATED: stark_proof.json"
+# The proof lands in target/proofs/<execution-id>/proof.json  
+PROOF_SRC=$(find target -name "proof.json" | grep "$EXECUTION_ID" | head -1)
+if [ -z "$PROOF_SRC" ]; then
+  PROOF_SRC=$(find target -name "proof.json" | head -1)
+fi
+
+if [ ! -f "$PROOF_SRC" ]; then
+  echo "ERROR: Proof file not found after scarb prove"
+  exit 1
+fi
+
+cp "$PROOF_SRC" "$PROOF_OUT"
+echo ">> Proof saved to: $PROOF_OUT"
+echo ">> [4/4] Done."
