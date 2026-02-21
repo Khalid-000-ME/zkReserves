@@ -1,0 +1,82 @@
+[
+  {
+    "timestamp_logged": "2026-02-20T19:47:37.090Z",
+    "proofCommitment": "0x4884102e9d9dc2b9255ff822459111e97352585535d3cda48c838ce9628f474",
+    "publicInputs": {
+      "entityId": "0x4a0237f4dbe578c08f1768d3a2e690d0ed318724853708bed16a78031d8b196",
+      "blockHeight": 123035,
+      "liabilityMerkleRoot": "0x110acdf6e79be4576ff50859c3445abdd2c4dcc0006abdbb56efd2441a814d2",
+      "reserveRatioBand": 3,
+      "proofTimestamp": 1771616855
+    },
+    "generationTimeMs": 3021,
+    "liabilityCount": 2,
+    "totalReservesBTC": 0.00170875,
+    "totalLiabilitiesBTC": 0.00075,
+    "estimatedRatioPct": 227.83
+  },
+  {
+    "timestamp_logged": "2026-02-20T20:14:26.060Z",
+    "proofCommitment": "0x67bdf6062232e42b325bbf6e5b635b953fe3b5091e19e13ae43c1414b7f1ea4",
+    "publicInputs": {
+      "entityId": "0x731e2b2e5ef776accd16131a27aeffd8502f488fec983815c7797220de3165c",
+      "blockHeight": 123042,
+      "liabilityMerkleRoot": "0x110acdf6e79be4576ff50859c3445abdd2c4dcc0006abdbb56efd2441a814d2",
+      "reserveRatioBand": 3,
+      "proofTimestamp": 1771618464
+    },
+    "generationTimeMs": 3019,
+    "liabilityCount": 2,
+    "totalReservesBTC": 0.00170875,
+    "totalLiabilitiesBTC": 0.00075,
+    "estimatedRatioPct": 227.83
+  },
+  {
+    "timestamp_logged": "2026-02-20T21:07:52.099Z",
+    "proofCommitment": "0x12d07a742dfe30944e2c9866c0a3e6521aecf74d6af05d5b387891ec28c3102",
+    "publicInputs": {
+      "entityId": "0x4d5532b884017d3c99f7d5f7d92c35feeda6f16b4b609e5302ca066c170c97",
+      "blockHeight": 123044,
+      "liabilityMerkleRoot": "0x52ac42017a5755d8cc1a9e719f82ceaecca5e30583e56ffea680a829916298e",
+      "reserveRatioBand": 3,
+      "proofTimestamp": 1771621670
+    },
+    "generationTimeMs": 3026,
+    "liabilityCount": 10,
+    "totalReservesBTC": 0.00170875,
+    "totalLiabilitiesBTC": 0.00085,
+    "estimatedRatioPct": 201.02
+  },
+  {
+    "timestamp_logged": "2026-02-21T08:29:25.565Z",
+    "proofCommitment": "0x51c152549bab12ace04da8912a99dc80dbbb3ec36c27e14db65847dd73635e9",
+    "publicInputs": {
+      "entityId": "0x5f1f5e032fb4fae05543e999a31739ed1f5b8ed4e919039e6ce293a24c3581c",
+      "blockHeight": 123096,
+      "liabilityMerkleRoot": "0x52ac42017a5755d8cc1a9e719f82ceaecca5e30583e56ffea680a829916298e",
+      "reserveRatioBand": 3,
+      "proofTimestamp": 1771662563
+    },
+    "generationTimeMs": 3031,
+    "liabilityCount": 10,
+    "totalReservesBTC": 0.00220875,
+    "totalLiabilitiesBTC": 0.00085,
+    "estimatedRatioPct": 259.85
+  },
+  {
+    "timestamp_logged": "2026-02-21T08:43:18.935Z",
+    "proofCommitment": "0x1793e28fa4d506c93a694e74f9d2658bc5d55114b85cf6c07987c35242bd3c5",
+    "publicInputs": {
+      "entityId": "0x5f1f5e032fb4fae05543e999a31739ed1f5b8ed4e919039e6ce293a24c3581c",
+      "blockHeight": 123096,
+      "liabilityMerkleRoot": "0x52ac42017a5755d8cc1a9e719f82ceaecca5e30583e56ffea680a829916298e",
+      "reserveRatioBand": 3,
+      "proofTimestamp": 1771663397
+    },
+    "generationTimeMs": 3027,
+    "liabilityCount": 10,
+    "totalReservesBTC": 0.00220875,
+    "totalLiabilitiesBTC": 0.00085,
+    "estimatedRatioPct": 259.85
+  }
+]
