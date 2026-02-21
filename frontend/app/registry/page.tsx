@@ -12,6 +12,7 @@ const ProofTimeline = dynamic(() => import("@/components/charts/ProofTimeline"),
 const RatioDistribution = dynamic(() => import("@/components/charts/RatioDistribution"), { ssr: false });
 
 import { REGISTRY_ADDRESS, provider, feltToHash } from "@/lib/starknet";
+import { hash } from "starknet";
 
 const DEMO_ENTITIES: EntityRow[] = [
     {
@@ -53,11 +54,44 @@ export default function RegistryPage() {
     const [refreshing, setRefreshing] = useState(false);
     const fetchRef = useRef<(() => Promise<void>) | null>(null);
 
+    const [rawEvents, setRawEvents] = useState<any[]>([]);
+    const [timeline, setTimeline] = useState("5d");
+
     useEffect(() => {
-        fetch("/api/ecosystem/stats")
-            .then((r) => r.json())
-            .then((d) => { setStats(d); })
-            .catch(() => { });
+        async function aggregateRealStats() {
+            try {
+                if (!REGISTRY_ADDRESS || REGISTRY_ADDRESS === "0x0") return;
+
+                const eventKey = hash.getSelectorFromName("ProofSubmitted");
+
+                // Scan the last ~50k blocks to avoid RPC timeouts
+                const currentBlock = await provider.getBlockNumber();
+                const fromBlock = Math.max(0, currentBlock - 50000);
+
+                let allEvents: any[] = [];
+                let continuationToken: string | undefined = undefined;
+
+                do {
+                    const eventsRes = await provider.getEvents({
+                        from_block: { block_number: fromBlock },
+                        address: REGISTRY_ADDRESS,
+                        keys: [[eventKey]],
+                        chunk_size: 100,
+                        continuation_token: continuationToken
+                    });
+
+                    allEvents = allEvents.concat(eventsRes.events);
+                    continuationToken = eventsRes.continuation_token;
+                } while (continuationToken);
+
+                setRawEvents(allEvents);
+
+            } catch (err) {
+                console.error("Failed to fetch historical stats:", err);
+            }
+        }
+
+        aggregateRealStats();
 
         async function callContract(entrypoint: string, calldata: string[] = []): Promise<string[]> {
             return provider.callContract({ contractAddress: REGISTRY_ADDRESS, entrypoint, calldata });
@@ -115,6 +149,33 @@ export default function RegistryPage() {
                 loaded.sort((a, b) => Number(b.proofTimestamp) - Number(a.proofTimestamp));
                 setEntities(loaded);
                 setLoading(false);
+
+                // Compute real band distribution and exact total proofs from the live entities data
+                let totalProofs = 0;
+                const dist = { 1: 0, 2: 0, 3: 0 };
+                let totalBandScore = 0;
+                let validCount = 0;
+
+                loaded.forEach(e => {
+                    totalProofs += e.submissionCount;
+                    if (e.status === "Active" || e.status === "Expiring") {
+                        dist[e.band as keyof typeof dist]++;
+                        totalBandScore += e.band;
+                        validCount++;
+                    }
+                });
+
+                setStats((prev: any) => ({
+                    ...prev,
+                    total_proofs_submitted_all_time: totalProofs,
+                    average_reserve_ratio_band: validCount > 0 ? Number(Object.entries(dist).reduce((a, b) => dist[a[0] as unknown as keyof typeof dist] > b[1] ? a : b)[0]) : null, // Get most frequent band
+                    band_distribution: [
+                        { band: 1, count: dist[1] },
+                        { band: 2, count: dist[2] },
+                        { band: 3, count: dist[3] }
+                    ]
+                }));
+
             } catch (error) {
                 console.error("Failed to load entities:", error);
                 setEntities(DEMO_ENTITIES);
@@ -127,6 +188,65 @@ export default function RegistryPage() {
         const interval = setInterval(fetchLiveEntities, 30_000);
         return () => clearInterval(interval);
     }, []);
+
+    useEffect(() => {
+        if (!rawEvents.length) return;
+
+        const nowSec = Math.floor(Date.now() / 1000);
+        let buckets: { start: number, end: number, date: string, count: number }[] = [];
+
+        if (timeline === "today") {
+            // Show last 24 hours in 4-hour buckets
+            buckets = Array.from({ length: 6 }, (_, i) => {
+                const start = nowSec - (5 - i) * 14400; // 4 hours in seconds
+                const d = new Date(start * 1000);
+                return { start, end: start + 14400, date: `${d.getHours()}:00`, count: 0 };
+            });
+        } else if (timeline === "5d") {
+            // Last 5 days, bucket by day
+            buckets = Array.from({ length: 5 }, (_, i) => {
+                const start = nowSec - (4 - i) * 86400; // 24 hours
+                const d = new Date(start * 1000);
+                return { start, end: start + 86400, date: `${d.getDate()}/${d.getMonth() + 1}`, count: 0 };
+            });
+        } else if (timeline === "1w") {
+            // Last 7 days, bucket by day
+            buckets = Array.from({ length: 7 }, (_, i) => {
+                const start = nowSec - (6 - i) * 86400;
+                const d = new Date(start * 1000);
+                return { start, end: start + 86400, date: `${d.getDate()}/${d.getMonth() + 1}`, count: 0 };
+            });
+        } else if (timeline === "1m") {
+            // Last 4 weeks, bucket by week
+            buckets = Array.from({ length: 4 }, (_, i) => {
+                const start = nowSec - (3 - i) * 604800;
+                const d = new Date(start * 1000);
+                return { start, end: start + 604800, date: `${d.getDate()}/${d.getMonth() + 1}`, count: 0 };
+            });
+        } else if (timeline === "2m") {
+            // Last 8 weeks, bucket by week
+            buckets = Array.from({ length: 8 }, (_, i) => {
+                const start = nowSec - (7 - i) * 604800;
+                const d = new Date(start * 1000);
+                return { start, end: start + 604800, date: `${d.getDate()}/${d.getMonth() + 1}`, count: 0 };
+            });
+        }
+
+        rawEvents.forEach(evt => {
+            const ts = Number(BigInt(evt.data[2]));
+            for (const b of buckets) {
+                if (ts >= b.start && ts < b.end) {
+                    b.count++;
+                    break;
+                }
+            }
+        });
+
+        setStats((prev: any) => ({
+            ...prev,
+            proof_history_30d: buckets.map(b => ({ date: b.date, count: b.count }))
+        }));
+    }, [rawEvents, timeline]);
 
     const valid = entities.filter((e) => e.status === "Active" || e.status === "Expiring").length;
     const expired = entities.filter((e) => e.status === "Expired").length;
@@ -183,7 +303,11 @@ export default function RegistryPage() {
                         </div>
                         <div className="stat-cell">
                             <div className="stat-label">Avg Reserve Band</div>
-                            <div className="stat-value">≥ 120%</div>
+                            <div className="stat-value" style={{ color: "var(--green)" }}>
+                                {stats?.average_reserve_ratio_band === 3 ? "≥ 120%" :
+                                    stats?.average_reserve_ratio_band === 2 ? "110–120%" :
+                                        stats?.average_reserve_ratio_band === 1 ? "100–110%" : "—"}
+                            </div>
                         </div>
                         <div className="stat-cell">
                             <div className="stat-label">Entities Registered</div>
@@ -206,19 +330,45 @@ export default function RegistryPage() {
                     </div>
 
                     <div className="grid-2 mt-6" style={{ gap: 16 }}>
-                        <div className="card">
-                            <div className="section-header">
-                                <div className="section-title">Proof Submissions</div>
-                                <div className="section-desc">Last 5 weeks</div>
+                        <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column" }}>
+                            <div className="section-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 0 }}>
+                                <div>
+                                    <div className="section-title">Proof Submissions</div>
+                                </div>
+                                <select
+                                    value={timeline}
+                                    onChange={(e) => setTimeline(e.target.value)}
+                                    style={{
+                                        background: "var(--surface)",
+                                        border: "1px solid var(--border)",
+                                        color: "var(--text-muted)",
+                                        fontSize: 12,
+                                        padding: "4px 8px",
+                                        borderRadius: "var(--radius)",
+                                        outline: "none",
+                                        cursor: "pointer",
+                                        marginLeft: "auto"
+                                    }}
+                                >
+                                    <option value="today">Today</option>
+                                    <option value="5d">Last 5 days</option>
+                                    <option value="1w">This week</option>
+                                    <option value="1m">This month</option>
+                                    <option value="2m">Last 2 months</option>
+                                </select>
                             </div>
-                            <ProofTimeline data={stats?.proof_history_30d ?? []} />
+                            <div style={{ flex: 1, minHeight: 180, marginTop: 16 }}>
+                                <ProofTimeline data={stats?.proof_history_30d ?? []} />
+                            </div>
                         </div>
-                        <div className="card">
+                        <div className="card" style={{ padding: "24px", display: "flex", flexDirection: "column" }}>
                             <div className="section-header">
                                 <div className="section-title">Reserve Band Distribution</div>
                                 <div className="section-desc">Active proofs only</div>
                             </div>
-                            <RatioDistribution data={stats?.band_distribution ?? [{ band: 1, count: 1 }, { band: 2, count: 2 }, { band: 3, count: 3 }]} />
+                            <div style={{ flex: 1, minHeight: 180, marginTop: 16 }}>
+                                <RatioDistribution data={stats?.band_distribution ?? [{ band: 1, count: 1 }, { band: 2, count: 2 }, { band: 3, count: 3 }]} />
+                            </div>
                         </div>
                     </div>
                 </div>

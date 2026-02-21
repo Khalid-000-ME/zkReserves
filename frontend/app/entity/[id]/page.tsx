@@ -78,19 +78,42 @@ export default function EntityPage() {
                 else if (r_expiry - nowSec < BigInt(72 * 3600)) status = "Expiring";
                 else status = "Active";
 
-                // Generate mock history since we don't have an indexer
-                const log = [];
-                let currentBlock = Number(r_height);
-                let currentTs = Number(r_timestamp);
-                for (let i = 0; i < Math.min(3, r_count); i++) {
-                    log.push({
-                        ts: BigInt(currentTs),
-                        block: currentBlock,
-                        band: Math.max(1, (r_band - (i % 2))), // vary it slightly
-                        txHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-                    });
-                    currentBlock -= 4032; // rough blocks per 4 weeks
-                    currentTs -= 2419200; // 28 days
+                // Fetch real on-chain events for the submission log
+                let log: any[] = [];
+                try {
+                    const eventKey = hash.getSelectorFromName("ProofSubmitted");
+                    // Fetch latest events for this contract
+                    const currentBlock = await provider.getBlockNumber();
+                    const fromBlock = Math.max(0, currentBlock - 50000);
+
+                    let allEvents: any[] = [];
+                    let continuationToken: string | undefined = undefined;
+
+                    do {
+                        const eventsRes = await provider.getEvents({
+                            from_block: { block_number: fromBlock },
+                            address: REGISTRY_ADDRESS,
+                            keys: [[eventKey], [idHex]],
+                            chunk_size: 100,
+                            continuation_token: continuationToken
+                        });
+
+                        allEvents = allEvents.concat(eventsRes.events);
+                        continuationToken = eventsRes.continuation_token;
+                    } while (continuationToken);
+
+                    log = allEvents.map((evt) => ({
+                        ts: BigInt(evt.data[2]),
+                        block: Number(BigInt(evt.data[0])),
+                        band: Number(BigInt(evt.data[1])),
+                        txHash: evt.transaction_hash
+                    }));
+
+                    // Sort descending by timestamp
+                    log.sort((a, b) => Number(b.ts) - Number(a.ts));
+                } catch (err) {
+                    console.error("Failed to fetch event logs:", err);
+                    // Fallback to minimal data if event indexer fails
                 }
 
                 setEntity({
@@ -123,11 +146,12 @@ export default function EntityPage() {
         try {
             // Hash the account ID similar to stringToFelt252 in merkle.ts
             // In a real system, the exchange would provide the exact `leaf` hash or parameters.
-            let accHex = "";
-            for (let i = 0; i < accountId.length; i++) {
-                accHex += accountId.charCodeAt(i).toString(16);
+            let accFelt = 0n;
+            for (const char of accountId) {
+                accFelt = (accFelt << 8n) | BigInt(char.charCodeAt(0));
             }
-            const accFelt = BigInt("0x" + accHex);
+            accFelt = accFelt % (2n ** 251n);
+
             const bal = BigInt(balanceSat);
 
             // Expected leaf = poseidon(accFelt, bal)
@@ -161,8 +185,8 @@ export default function EntityPage() {
 
     if (loading) {
         return (
-            <div className="page flex justify-center items-center" style={{ minHeight: "60vh" }}>
-                <div style={{ display: "flex", gap: 8, color: "var(--text-muted)" }}><span className="spinner" /> Loading entity records...</div>
+            <div className="page" style={{ minHeight: "60vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8, color: "var(--text-muted)", alignItems: "center" }}><span className="spinner" /> Loading entity records...</div>
             </div>
         );
     }
@@ -282,7 +306,7 @@ export default function EntityPage() {
                                                 <td><ReserveRatioBand band={row.band} size="sm" /></td>
                                                 <td>
                                                     <a
-                                                        href={`https://sepolia.starkscan.co/tx/${row.txHash}`}
+                                                        href={`https://sepolia.voyager.online/tx/${row.txHash}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="mono-sm"

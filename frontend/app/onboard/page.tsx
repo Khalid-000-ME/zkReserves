@@ -126,6 +126,18 @@ export default function OnboardPage() {
                 },
                 (steps: ProofGenerationProgress[]) => setProgressSteps(steps)
             );
+
+            // Log to server so it appears in the backend terminal for auditor verification
+            try {
+                await fetch("/api/proof/log", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(result)
+                });
+            } catch (err) {
+                console.error("Failed to log proof to server:", err);
+            }
+
             setProof(result);
             setStep(6);
         } catch (e: any) {
@@ -154,6 +166,7 @@ export default function OnboardPage() {
                     entrypoint: "submit_proof",
                     calldata: [
                         proof.publicInputs.entityId,
+                        proof.publicInputs.entityId,
                         proof.publicInputs.blockHeight.toString(),
                         proof.publicInputs.liabilityMerkleRoot,
                         proof.publicInputs.reserveRatioBand.toString(),
@@ -171,7 +184,7 @@ export default function OnboardPage() {
         }
     }
 
-    const totalBTC = balances.reduce((s, b) => s + b.satoshi, 0);
+    const totalBTC = balances.reduce((s, b) => s + (b.balance ?? b.satoshi ?? 0), 0);
 
     return (
         <div className="page">
