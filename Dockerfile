@@ -5,7 +5,7 @@
 # CPU execution engines built by StarkWare and LambdaClass.
 
 # Stage 1: Build robust trace execution engine (cairo1-run) from source!
-FROM rust:1.76-slim-bullseye AS trace-builder
+FROM rust:slim-bullseye AS trace-builder
 RUN apt-get update && apt-get install -y git
 # We natively compile cairo1-run since binary releases are unstable
 RUN cargo install --git https://github.com/lambdaclass/cairo-vm.git cairo1-run
