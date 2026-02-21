@@ -98,7 +98,7 @@ export default function OnboardPage() {
                 const rpcs: Record<string, string> = {
                     base_sepolia: "https://sepolia.base.org",
                     arbitrum_sepolia: "https://sepolia-rollup.arbitrum.io/rpc",
-                    ethereum_sepolia: "https://rpc.sepolia.org"
+                    ethereum_sepolia: "https://ethereum-sepolia-rpc.publicnode.com"
                 };
 
                 const usdcContracts: Record<string, string> = {
