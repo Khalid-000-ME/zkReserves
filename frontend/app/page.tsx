@@ -47,7 +47,7 @@ export default function LandingPage() {
             num: "02",
             icon: ChartBarIcon,
             title: "Run the ZK Circuit",
-            desc: "Add your Bitcoin cold wallet addresses. Upload your customer liability CSV. The zero-knowledge circuit runs entirely in your browser — your balances and customer data never leave your machine.",
+            desc: "Add your Bitcoin (or other token) cold wallet addresses. Upload your customer liability CSV. The zero-knowledge circuit runs entirely in your browser — your balances and customer data never leave your machine.",
         },
         {
             num: "03",
@@ -116,7 +116,7 @@ export default function LandingPage() {
                             margin: "0 auto 40px",
                             fontFamily: "var(--font)"
                         }}>
-                            zkReserves lets any Bitcoin custodian cryptographically prove their reserves exceed liabilities — without exposing wallet addresses, exact balances, or customer data.
+                            zkReserves lets any Bitcoin (or other digital asset) custodian cryptographically prove their reserves exceed liabilities — without exposing wallet addresses, exact balances, or customer data.
                         </p>
 
                         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 72 }}>
@@ -127,6 +127,16 @@ export default function LandingPage() {
                             <Link href="/registry" className="btn btn-secondary btn-lg" style={{ padding: "12px 28px", fontSize: 15, borderRadius: 32 }}>
                                 View Live Registry
                             </Link>
+                        </div>
+
+                        {/* Token Logos to show multi-token support */}
+                        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 16, marginBottom: 72, flexWrap: "wrap", opacity: 0.8 }}>
+                            <span style={{ fontSize: 13, color: "var(--text-dim)", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 500, marginRight: 8 }}>Supported Assets:</span>
+                            <img src="https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/32/icon/btc.png" width="28" height="28" alt="Bitcoin" title="Bitcoin (Primary)" style={{ borderRadius: "50%", filter: "drop-shadow(0 0 8px rgba(247,147,26,0.3))", transform: "scale(1.1)" }} />
+                            <img src="https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/32/icon/eth.png" width="24" height="24" alt="Ethereum" title="Ethereum" style={{ borderRadius: "50%", opacity: 0.7 }} />
+                            <img src="https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/32/icon/usdc.png" width="24" height="24" alt="USDC" title="USDC" style={{ borderRadius: "50%", opacity: 0.7 }} />
+                            <img src="https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/32/icon/usdt.png" width="24" height="24" alt="Tether" title="Tether" style={{ borderRadius: "50%", opacity: 0.7 }} />
+                            <img src="https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/32/icon/sol.png" width="24" height="24" alt="Solana" title="Solana" style={{ borderRadius: "50%", opacity: 0.7 }} />
                         </div>
                     </div>
 
@@ -338,7 +348,7 @@ export default function LandingPage() {
             <footer style={{ borderTop: "1px solid var(--border-subtle)", padding: "24px 0" }}>
                 <div className="container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                     <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                        zkReserves · Re{"{"}define{"}"} Hackathon · Privacy + Bitcoin on Starknet
+                        zkReserves · Re{"{"}define{"}"} Hackathon · Privacy & Bitcoin (Multi-Token) on Starknet
                     </div>
                     <div style={{ display: "flex", gap: 16 }}>
                         {[

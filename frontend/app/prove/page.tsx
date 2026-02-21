@@ -266,13 +266,13 @@ export default function ProvePage() {
                             <div className="card card-lg">
                                 <div className="flex items-center gap-3 mb-4">
                                     <CurrencyDollarIcon style={{ width: 22, height: 22, color: "var(--accent)" }} />
-                                    <h2 style={{ fontSize: 16, fontWeight: 600 }}>Verify Bitcoin wallet addresses</h2>
+                                    <h2 style={{ fontSize: 16, fontWeight: 600 }}>Verify wallet addresses</h2>
                                 </div>
                                 <p className="text-muted mb-4" style={{ fontSize: 13, lineHeight: 1.7 }}>
                                     Your previously used cold wallet addresses are pre-filled. Update them if needed.
                                 </p>
                                 <div className="field mb-4">
-                                    <label className="label">Bitcoin Addresses (one per line)</label>
+                                    <label className="label">Wallet Addresses (BTC, ETH, etc. - one per line)</label>
                                     <textarea
                                         className="input input-mono"
                                         rows={5}

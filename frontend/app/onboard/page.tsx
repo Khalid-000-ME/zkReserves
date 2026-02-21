@@ -305,13 +305,13 @@ export default function OnboardPage() {
                     <div className="card card-lg">
                         <div className="flex items-center gap-3 mb-4">
                             <CurrencyDollarIcon style={{ width: 22, height: 22, color: "var(--accent)" }} />
-                            <h2 style={{ fontSize: 16, fontWeight: 600 }}>Add Bitcoin wallet addresses</h2>
+                            <h2 style={{ fontSize: 16, fontWeight: 600 }}>Add your wallet addresses</h2>
                         </div>
                         <p className="text-muted mb-4" style={{ fontSize: 13, lineHeight: 1.7 }}>
-                            Enter your Bitcoin cold wallet addresses — one per line. The Xverse API will fetch confirmed balances. These addresses remain <strong>private</strong> and are used only as circuit inputs.
+                            Enter your Bitcoin (or other supported token) cold wallet addresses — one per line. The API will fetch confirmed balances. These addresses remain <strong>private</strong> and are used only as circuit inputs.
                         </p>
                         <div className="field mb-4">
-                            <label className="label">Bitcoin Addresses (one per line)</label>
+                            <label className="label">Wallet Addresses (BTC, ETH, etc. - one per line)</label>
                             <textarea
                                 className="input input-mono"
                                 rows={5}
