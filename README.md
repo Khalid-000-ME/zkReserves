@@ -453,7 +453,7 @@ Open http://localhost:3000
 | ReservesRegistry  | 0x05128d4d6dc00fa4faa7bdf53398d377c0f4b81519c0df15ec1f7ff53fc6f152 |
 | ProofScheduler    | 0x0055a7610b71fd44dadb8d2042305341191a86a585cd52d355906d4d598ec9cb |
 
-Starkscan: https://sepolia.starkscan.co/contract/0x05128d4d6dc00fa4faa7bdf53398d377c0f4b81519c0df15ec1f7ff53fc6f152
+Starkscan: https://sepolia.voyager.online/contract/0x05128d4d6dc00fa4faa7bdf53398d377c0f4b81519c0df15ec1f7ff53fc6f152
 
 ---
 

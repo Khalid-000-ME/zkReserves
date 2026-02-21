@@ -27,6 +27,7 @@ export interface ProofOutput {
     totalReservesBTC: number;
     totalLiabilitiesBTC: number;
     estimatedRatioPct: number;
+    starkProofBytecode?: string;
 }
 
 export interface ProofGenerationProgress {
@@ -124,8 +125,31 @@ export async function generateProof(
         timestamp
     );
 
-    // Simulate proof generation time (in production this is cairo-prove running)
-    await delay(1500);
+    // Call True ZK Prover API
+    let trueZkPayload;
+    try {
+        const response = await fetch("/api/prove", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                entityId: input.entityId,
+                walletBalances: input.walletBalances,
+                liabilitiesCSV: input.liabilitiesCSV,
+                btcBlockHeight: input.btcBlockHeight
+            })
+        });
+
+        if (!response.ok) {
+            const errBody = await response.text();
+            throw new Error(`Prover API responded with ${response.status}: ${errBody}`);
+        }
+
+        trueZkPayload = await response.json();
+    } catch (err) {
+        updateProgress(5, "error", String(err));
+        throw new Error(`Failed to contact True ZK Prover API: ${err}`);
+    }
+
     updateProgress(5, "done");
 
     const generationTimeMs = Date.now() - startTime;
@@ -148,6 +172,7 @@ export async function generateProof(
         totalReservesBTC: totalReservesSatoshi / 1e8,
         totalLiabilitiesBTC: Number(totalLiabilitiesBigInt) / 1e8,
         estimatedRatioPct: ratioPct,
+        starkProofBytecode: trueZkPayload?.proofData?.starkProofBytecode
     };
 }
 

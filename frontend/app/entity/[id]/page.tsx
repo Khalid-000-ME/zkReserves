@@ -45,6 +45,11 @@ export default function EntityPage() {
     const [merklePath, setMerklePath] = useState("");
     const [verifyResult, setVerifyResult] = useState<"none" | "success" | "fail">("none");
 
+    // True ZK verify state
+    const [starkProof, setStarkProof] = useState("");
+    const [verifySTARKLoading, setVerifySTARKLoading] = useState(false);
+    const [verifySTARKResult, setVerifySTARKResult] = useState<"none" | "success" | "fail">("none");
+
     useEffect(() => {
         async function fetchEntity() {
             try {
@@ -109,11 +114,9 @@ export default function EntityPage() {
                         txHash: evt.transaction_hash
                     }));
 
-                    // Sort descending by timestamp
                     log.sort((a, b) => Number(b.ts) - Number(a.ts));
-                } catch (err) {
-                    console.error("Failed to fetch event logs:", err);
-                    // Fallback to minimal data if event indexer fails
+                } catch (e) {
+                    console.error("Failed to fetch events from node", e);
                 }
 
                 setEntity({
@@ -129,8 +132,8 @@ export default function EntityPage() {
                     log
                 });
 
-            } catch (e) {
-                console.error(e);
+            } catch (err) {
+                console.error("Error loading entity", err);
                 setNotFound(true);
             }
             setLoading(false);
@@ -138,6 +141,37 @@ export default function EntityPage() {
 
         fetchEntity();
     }, [idParam]);
+
+    async function handleVerifySTARK() {
+        if (!starkProof.trim()) return;
+        setVerifySTARKLoading(true);
+        setVerifySTARKResult("none");
+
+        try {
+            const res = await fetch("/api/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    entityId: entity?.id,
+                    starkProofBytecode: starkProof
+                })
+            });
+
+            if (!res.ok) throw new Error("Verification failed on API");
+
+            const data = await res.json();
+            if (data.verified) {
+                setVerifySTARKResult("success");
+            } else {
+                setVerifySTARKResult("fail");
+            }
+        } catch (e) {
+            console.error(e);
+            setVerifySTARKResult("fail");
+        }
+
+        setVerifySTARKLoading(false);
+    }
 
     // Inclusion proof verification logic
     function handleVerify() {
@@ -257,6 +291,30 @@ export default function EntityPage() {
                                     <span className={mono ? "mono-sm" : "text-sm"} style={{ color: "var(--text)", maxWidth: 220, textAlign: "right", wordBreak: "break-all" }}>{value}</span>
                                 </div>
                             ))}
+                        </div>
+                    </div>
+
+                    {/* True ZK Solvency Verification Widget */}
+                    <div className="card">
+                        <div className="section-title mb-1">Verify True ZK Solvency</div>
+                        <p className="text-muted text-sm mb-4">
+                            Run the full Cairo STARK Verification check to mathematically prove total reserves exceed exactly this Merkle tree&apos;s liability sum.
+                        </p>
+                        <div className="mb-4">
+                            <textarea
+                                className="input mono-sm w-full"
+                                style={{ minHeight: "80px", resize: "vertical" }}
+                                placeholder='Paste stark_proof.json bytecode here...'
+                                value={starkProof}
+                                onChange={e => setStarkProof(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex gap-2 items-center">
+                            <button className="btn btn-secondary btn-sm" onClick={handleVerifySTARK} disabled={verifySTARKLoading}>
+                                {verifySTARKLoading ? "Verifying STARK Trace..." : "Verify STARK Proof"}
+                            </button>
+                            {verifySTARKResult === "success" && <div className="badge badge-green"><CheckCircleIcon style={{ width: 14, height: 14 }} /> Verified Solvency</div>}
+                            {verifySTARKResult === "fail" && <div className="badge badge-red"><XCircleIcon style={{ width: 14, height: 14 }} /> Invalid STARK</div>}
                         </div>
                     </div>
 

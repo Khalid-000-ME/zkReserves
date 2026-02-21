@@ -78,5 +78,22 @@
     "totalReservesBTC": 0.00220875,
     "totalLiabilitiesBTC": 0.00085,
     "estimatedRatioPct": 259.85
+  },
+  {
+    "timestamp_logged": "2026-02-21T09:55:16.880Z",
+    "proofCommitment": "0x6cb909512211cb2b446632f04e3f02ab85034cc25294e9ad68acbe6cf4ac6e3",
+    "publicInputs": {
+      "entityId": "0x5f1f5e032fb4fae05543e999a31739ed1f5b8ed4e919039e6ce293a24c3581c",
+      "blockHeight": 123100,
+      "liabilityMerkleRoot": "0x52ac42017a5755d8cc1a9e719f82ceaecca5e30583e56ffea680a829916298e",
+      "reserveRatioBand": 3,
+      "proofTimestamp": 1771667713
+    },
+    "generationTimeMs": 5224,
+    "liabilityCount": 10,
+    "totalReservesBTC": 0.00220875,
+    "totalLiabilitiesBTC": 0.00085,
+    "estimatedRatioPct": 259.85,
+    "starkProofBytecode": "{\"proof_hex\": \"0x0abdefc...\"}"
   }
 ]

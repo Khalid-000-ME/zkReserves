@@ -28,3 +28,8 @@ target/
 # Custom / Temp Docs
 starknet_help/
 upload.csv
+prd.md
+page.tsx.bak
+
+*.md
+!README.md
