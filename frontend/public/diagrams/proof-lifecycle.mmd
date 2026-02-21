@@ -1,0 +1,9 @@
+stateDiagram-v2
+    [*] --> Unregistered
+    Unregistered --> NeverProven : register_entity() called
+    NeverProven --> Active : submit_proof() - solvent
+    Active --> Active : submit_proof() - renewed
+    Active --> Expiring : Now > expiry - 3 days
+    Expiring --> Active : submit_proof() - renewed in time
+    Expiring --> Expired : Now > expiry_timestamp
+    Expired --> Active : submit_proof() - late renewal

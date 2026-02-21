@@ -1,0 +1,33 @@
+flowchart TD
+    A([Visit zkReserves]) --> B{First time?}
+    B -->|Yes| C[/onboard]
+    B -->|No| D[/dashboard]
+
+    subgraph Onboarding [Operator Onboarding]
+        C --> C1[Step 1\nConnect Braavos wallet]
+        C1 --> C2[Step 2\nEnter exchange name]
+        C2 --> C3[Step 3\nAdd Bitcoin addresses]
+        C3 --> C4[Step 4\nUpload liability CSV]
+        C4 --> C5[Step 5\nRun ZK circuit]
+        C5 --> C6{Circuit result}
+        C6 -->|Proof generated| C7[Step 6\nSign and submit]
+        C6 -->|Insolvent| C8[Error: Cannot generate proof]
+        C7 --> D
+    end
+
+    subgraph Dashboard [Operator Dashboard]
+        D --> D1{Proof status?}
+        D1 -->|Active| D2[Show status\nband chart\nhistory]
+        D1 -->|Expiring| D3[Renewal warning]
+        D1 -->|Expired| D4[Expired warning]
+        D3 --> E[/prove]
+        D4 --> E
+    end
+
+    subgraph Renewal [Proof Renewal]
+        E --> E1[BTC addresses pre-filled]
+        E1 --> E2[Upload fresh CSV]
+        E2 --> E3[Run ZK circuit]
+        E3 --> E4[Sign and submit]
+        E4 --> D
+    end

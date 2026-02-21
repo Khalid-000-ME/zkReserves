@@ -1,0 +1,37 @@
+graph TB
+    subgraph Browser [Browser - Operator]
+        UI[Next.js Frontend]
+        ZK[ZK Circuit Runner]
+        MK[Poseidon Merkle Builder]
+        XV[Xverse BTC Fetcher]
+    end
+
+    subgraph API [Next.js API Routes]
+        PG[/api/proof/generate]
+        PS[/api/proof/submit]
+        ES[/api/ecosystem/stats]
+        VM[/api/verify/manual]
+    end
+
+    subgraph Starknet [Starknet Sepolia]
+        RR[ReservesRegistry.cairo]
+        PSC[ProofScheduler.cairo]
+    end
+
+    subgraph BTC [Bitcoin Network]
+        XAPI[Xverse API]
+        BTCN[Bitcoin Blockchain]
+    end
+
+    UI --> ZK
+    UI --> MK
+    XV --> XAPI
+    XAPI --> BTCN
+    UI --> PG
+    PG --> ZK
+    UI --> PS
+    PS --> RR
+    PS --> PSC
+    UI --> ES
+    ES --> RR
+    RR --> PSC
