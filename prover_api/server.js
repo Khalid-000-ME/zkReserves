@@ -32,7 +32,10 @@ function run(bin, args) {
         console.log(`  $ ${cmdLog}`);
         const child = spawn(bin, args, {
             cwd: CIRCUIT_DIR,
-            env: process.env,
+            env: {
+                ...process.env,
+                RAYON_NUM_THREADS: '1', // Constrain Stwo parallel proving memory footprint on Railway
+            },
         });
 
         let stdout = '';
@@ -50,11 +53,15 @@ function run(bin, args) {
             process.stdout.write(s); // scarb writes progress to stderr
         });
 
-        child.on('close', (code) => {
+        child.on('close', (code, signal) => {
             if (code === 0) {
                 resolve(stdout.trim());
             } else {
-                const err = new Error(stderr.trim() || `Command failed (exit ${code}): ${cmdLog}`);
+                let msg = stderr.trim() || `Command failed: ${cmdLog}`;
+                if (code === null) msg += `\n(Killed by signal ${signal} - likely Out of Memory on Railway Hobby tier)`;
+                else msg += `\n(Exit code ${code})`;
+
+                const err = new Error(msg);
                 err.stderr = stderr;
                 reject(err);
             }
