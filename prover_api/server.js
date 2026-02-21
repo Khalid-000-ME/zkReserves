@@ -9,7 +9,9 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-const CIRCUIT_DIR = path.join(__dirname, '..', 'circuit');
+const LOCAL_CIRCUIT = path.join(__dirname, '..', 'circuit');
+const DOCKER_CIRCUIT = path.join(__dirname, 'circuit'); // When server.js is copied to /app/server.js
+const CIRCUIT_DIR = fs.existsSync(DOCKER_CIRCUIT) ? DOCKER_CIRCUIT : LOCAL_CIRCUIT;
 
 // Scarb 2.12.2 binary path
 const SCARB_LOCAL = '/Users/khalid/.asdf/installs/scarb/2.12.2/bin/scarb';
