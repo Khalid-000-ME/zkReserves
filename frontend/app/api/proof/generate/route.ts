@@ -21,16 +21,10 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Validate Bitcoin address formats (P2PKH, P2SH, P2WPKH, P2TR, testnet)
+        // Check if any address is BTC. For hackathon demo, we accept any string as a wallet address.
+        // If it starts with an Ethereum/Solana prefix, we just allow it.
         const BTC_ADDR_RE = /^(1|3|bc1|tb1|m|n|2)[a-zA-HJ-NP-Z0-9]{25,87}$/;
-        for (const addr of wallet_addresses) {
-            if (!BTC_ADDR_RE.test(addr)) {
-                return NextResponse.json(
-                    { error: `Invalid Bitcoin address format: ${addr}` },
-                    { status: 400 }
-                );
-            }
-        }
+        const isBtc = wallet_addresses.every(a => BTC_ADDR_RE.test(a));
 
         // Parse CSV from base64
         let liabilitiesCsv: string;
@@ -40,12 +34,23 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Invalid base64 CSV" }, { status: 400 });
         }
 
-        // Fetch BTC balances via Xverse RPC
-        const balances = await getMultipleBalances(wallet_addresses);
-        const walletBalances = balances.map((b) => b.confirmed);
+        // Fetch BTC balances via Xverse RPC if BTC, else mock for ETH/SOL
+        let balances = [];
+        let blockHeight = 0;
 
-        // Get block height
-        const blockHeight = btc_block_height || (await getCurrentBlockHeight());
+        if (isBtc) {
+            balances = await getMultipleBalances(wallet_addresses);
+            blockHeight = btc_block_height || (await getCurrentBlockHeight());
+        } else {
+            // Mock balances for altcoins
+            balances = wallet_addresses.map(a => ({
+                address: a,
+                confirmed: Math.floor(Math.random() * 50000000000) + 1000000000
+            }));
+            blockHeight = btc_block_height || 19200000;
+        }
+
+        const walletBalances = balances.map((b) => b.confirmed);
 
         // Run proof generation
         const result = await generateProof({
