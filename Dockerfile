@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 
 # Install Starknet Scarb Compiler globally
 RUN curl --proto '=https' --tlsv1.2 -sSf https://docs.swmansion.com/scarb/install.sh | sh
-ENV PATH="/root/.local/bin:${PATH}"
+ENV PATH /root/.local/bin:$PATH
 
 # Install cairo1-run (needed to generate polynomial traces)
 RUN curl -L https://github.com/lambdaclass/cairo1_run/releases/download/v0.3.0/cairo1-run-linux -o /usr/local/bin/cairo-run
