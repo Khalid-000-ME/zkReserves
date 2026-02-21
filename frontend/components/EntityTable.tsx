@@ -107,31 +107,55 @@ export default function EntityTable({ entities, loading }: Props) {
 
                             return (
                                 <React.Fragment key={g.parent}>
-                                    {/* Parent Group Row */}
-                                    <tr onClick={() => hasMultiple && toggleExpand(g.parent)} className={hasMultiple ? "clickable" : ""} style={{ background: hasMultiple ? "var(--surface-2)" : "transparent" }}>
-                                        <td>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                                                {hasMultiple && (
-                                                    isExpanded ? <ChevronUpIcon style={{ width: 14, height: 14, color: "var(--text-muted)" }} /> : <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--text-muted)" }} />
-                                                )}
-                                                <span style={{ fontWeight: 600, color: "var(--text)" }}>{g.parent}</span>
-                                            </div>
-                                        </td>
-                                        <td><ProofStatusBadge status={aggStatus} /></td>
-                                        <td><span className="text-muted text-sm">{bandSummary}</span></td>
-                                        <td><span className="mono-sm text-dim">{g.children.length} {g.children.length === 1 ? 'asset' : 'assets'}</span></td>
-                                        <td><span className="mono-sm text-muted">{totalSubmits}</span></td>
-                                    </tr>
+                                    {/* Parent Group Row (or only row if 1 child) */}
+                                    {hasMultiple ? (
+                                        <tr onClick={() => toggleExpand(g.parent)} className="clickable" style={{ background: "var(--surface-2)" }}>
+                                            <td>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                    {isExpanded ? <ChevronUpIcon style={{ width: 14, height: 14, color: "var(--text-muted)" }} /> : <ChevronDownIcon style={{ width: 14, height: 14, color: "var(--text-muted)" }} />}
+                                                    <span style={{ fontWeight: 600, color: "var(--text)" }}>{g.parent}</span>
+                                                </div>
+                                            </td>
+                                            <td><ProofStatusBadge status={aggStatus} /></td>
+                                            <td><span className="text-muted text-sm">{bandSummary}</span></td>
+                                            <td><span className="mono-sm text-dim">{g.children.length} assets</span></td>
+                                            <td><span className="mono-sm text-muted">{totalSubmits}</span></td>
+                                        </tr>
+                                    ) : (
+                                        // Single child row directly clickable to the entity page
+                                        <tr className="clickable">
+                                            <td>
+                                                <Link href={`/entity/${g.children[0].id}`} style={{ display: "flex", flexDirection: "column", textDecoration: "none" }}>
+                                                    <span style={{ fontWeight: 600, color: "var(--text)" }}>{g.parent}</span>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                                                        <span style={{ color: "var(--green)", fontWeight: 500, fontSize: 13 }}>{g.children[0].name.split("|")[1] || "BTC"}</span>
+                                                        <span style={{ color: "var(--text-dim)", fontSize: 11 }}>{g.children[0].name.split("|")[2] || "Bitcoin"}</span>
+                                                    </div>
+                                                </Link>
+                                            </td>
+                                            <td><ProofStatusBadge status={aggStatus} /></td>
+                                            <td>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                    {g.children[0].status === "NeverProven" ? <span className="text-muted">—</span> : <ReserveRatioBand band={g.children[0].band} size="sm" />}
+                                                    <span className="mono-sm text-dim">Block #{Number(g.children[0].blockHeight).toLocaleString()}</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {g.children[0].status === "NeverProven" ? <span className="text-muted">—</span> : <span className="text-muted text-sm px-2">Proven {formatRelativeTime(g.children[0].proofTimestamp)}</span>}
+                                            </td>
+                                            <td><span className="mono-sm text-muted">{totalSubmits}</span></td>
+                                        </tr>
+                                    )}
 
-                                    {/* Token-Specific Child Rows (Only show if multiple and expanded, OR if just one child then show immediately but offset) */}
-                                    {(isExpanded || !hasMultiple) && g.children.map(c => {
+                                    {/* Token-Specific Child Rows (Only show if multiple and expanded) */}
+                                    {(isExpanded && hasMultiple) && g.children.map(c => {
                                         const parts = c.name.split("|");
                                         const tokenName = parts[1] || "BTC";
                                         const networkName = parts[2] || "Bitcoin";
 
                                         return (
-                                            <tr key={c.id} style={{ background: hasMultiple ? "rgba(0,0,0,0.2)" : "transparent" }}>
-                                                <td style={{ paddingLeft: hasMultiple ? 32 : 16 }}>
+                                            <tr key={c.id} style={{ background: "rgba(0,0,0,0.2)" }}>
+                                                <td style={{ paddingLeft: 32 }}>
                                                     <Link href={`/entity/${c.id}`} style={{ display: "flex", flexDirection: "column", textDecoration: "none" }}>
                                                         <span style={{ color: "var(--green)", fontWeight: 500, fontSize: 13 }}>{tokenName}</span>
                                                         <span style={{ color: "var(--text-dim)", fontSize: 11 }}>{networkName}</span>
@@ -141,15 +165,12 @@ export default function EntityTable({ entities, loading }: Props) {
                                                 <td>
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                                         {c.status === "NeverProven" ? <span className="text-muted">—</span> : <ReserveRatioBand band={c.band} size="sm" />}
-                                                        <span className="mono-sm text-dim">Block #{Number(c.blockHeight).toLocaleString()}</span>
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    {c.status === "NeverProven" ? <span className="text-muted">—</span> : <span className="text-muted text-sm px-2">Proven {formatRelativeTime(c.proofTimestamp)}</span>}
+                                                    {c.status === "NeverProven" ? <span className="text-muted">—</span> : <span className="text-muted text-sm px-2">Proven <span className="mono-sm text-dim">Block #{Number(c.blockHeight).toLocaleString()}</span></span>}
                                                 </td>
-                                                <td>
-                                                    {c.status === "NeverProven" ? <span className="text-muted">—</span> : <ProofCountdown expiryTimestamp={c.expiryTimestamp} />}
-                                                </td>
+                                                <td><span className="mono-sm text-muted">{c.submissionCount}</span></td>
                                             </tr>
                                         );
                                     })}

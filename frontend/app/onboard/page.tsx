@@ -49,6 +49,8 @@ export default function OnboardPage() {
     const [error, setError] = useState("");
     const [txHash, setTxHash] = useState("");
     const [blockHeight, setBlockHeight] = useState<number>(0);
+    const [evmNetwork, setEvmNetwork] = useState("ethereum_sepolia"); // base_sepolia, arbitrum_sepolia
+    const [accountId, setAccountId] = useState("");
     const fileRef = useRef<HTMLInputElement>(null);
 
     const { address: walletAddress, isConnected, account } = useAccount();
@@ -89,9 +91,49 @@ export default function OnboardPage() {
                 const [bals, height] = await Promise.all([getMultipleBalances(addrs), getCurrentBlockHeight(isTestnet)]);
                 setBalances(bals);
                 setBlockHeight(height);
+            } else if (assetType === "ETH" || assetType === "USDC") {
+                // Fetch real balances via ethers using pure public RPCs
+                const { ethers } = await import("ethers");
+
+                const rpcs: Record<string, string> = {
+                    base_sepolia: "https://sepolia.base.org",
+                    arbitrum_sepolia: "https://sepolia-rollup.arbitrum.io/rpc",
+                    ethereum_sepolia: "https://rpc.sepolia.org"
+                };
+
+                const usdcContracts: Record<string, string> = {
+                    base_sepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                    arbitrum_sepolia: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
+                    ethereum_sepolia: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+                };
+
+                const provider = new ethers.providers.JsonRpcProvider(rpcs[evmNetwork]);
+                const blockHeightFetched = await provider.getBlockNumber();
+                setBlockHeight(blockHeightFetched);
+
+                let realBalances = [];
+
+                if (assetType === "ETH") {
+                    for (const addr of addrs) {
+                        const bal = await provider.getBalance(addr);
+                        const num = Number(ethers.utils.formatEther(bal));
+                        // the circuit uses sats/wei internally, just convert to closest equivalent number
+                        realBalances.push({ address: addr, balance: Math.floor(num * 100000000), satoshi: Math.floor(num * 100000000) });
+                    }
+                } else if (assetType === "USDC") {
+                    const abi = ["function balanceOf(address owner) view returns (uint256)"];
+                    const contract = new ethers.Contract(usdcContracts[evmNetwork], abi, provider);
+                    for (const addr of addrs) {
+                        const bal = await contract.balanceOf(addr);
+                        // USDC has 6 decimals, normalize it
+                        const num = Number(ethers.utils.formatUnits(bal, 6));
+                        realBalances.push({ address: addr, balance: Math.floor(num * 100000000), satoshi: Math.floor(num * 100000000) });
+                    }
+                }
+
+                setBalances(realBalances);
             } else {
-                // Mock ETH/Solana fetch logic for non-BTC tokens
-                // In a production app, this would use viem or solana/web3.js
+                // Mock for SOL
                 await new Promise(r => setTimeout(r, 1200));
                 const mockBalances = addrs.map((addr) => ({
                     address: addr,
@@ -104,7 +146,8 @@ export default function OnboardPage() {
             }
             setStep(4);
         } catch (e: any) {
-            setError(e.message);
+            console.error("Fetch Balances Error", e);
+            setError(e.message || "Failed to fetch balances across networks");
         } finally {
             setLoading(false);
         }
@@ -334,18 +377,63 @@ export default function OnboardPage() {
                             <label className="label">Select Digital Asset</label>
                             <select className="input input-mono" value={assetType} onChange={e => setAssetType(e.target.value)} style={{ appearance: "auto", paddingRight: 32 }}>
                                 <option value="BTC">Bitcoin (BTC) - via Xverse API</option>
-                                <option value="ETH">Ethereum (ETH) - Mocked for Demo</option>
-                                <option value="USDC">USD Coin (USDC) - Mocked for Demo</option>
-                                <option value="SOL">Solana (SOL) - Mocked for Demo</option>
+                                <option value="ETH">Ethereum (ETH) - Live Fetching</option>
+                                <option value="USDC">USD Coin (USDC) - Live Fetching</option>
+                                <option value="SOL">Solana (SOL) - Mocked</option>
                             </select>
                         </div>
 
+                        {(assetType === "ETH" || assetType === "USDC") && (
+                            <div className="field mb-4">
+                                <label className="label">Select Deployment Network</label>
+                                <select className="input input-mono" value={evmNetwork} onChange={e => setEvmNetwork(e.target.value)} style={{ appearance: "auto", paddingRight: 32 }}>
+                                    <option value="ethereum_sepolia">Ethereum Sepolia</option>
+                                    <option value="base_sepolia">Base Sepolia</option>
+                                    <option value="arbitrum_sepolia">Arbitrum Sepolia</option>
+                                </select>
+                            </div>
+                        )}
+
                         <div className="field mb-4">
-                            <label className="label">Wallet Addresses ({assetType} - one per line)</label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="label" style={{ marginBottom: 0 }}>Wallet Addresses ({assetType} - one per line)</label>
+                                {(assetType === "ETH" || assetType === "USDC") && (
+                                    <button
+                                        className="btn btn-ghost btn-sm"
+                                        style={{ height: 28, minHeight: 28, fontSize: 12 }}
+                                        onClick={async () => {
+                                            if (typeof window !== "undefined" && (window as any).ethereum) {
+                                                try {
+                                                    const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+                                                    if (accounts?.[0]) {
+                                                        const existing = btcAddresses.trim() ? btcAddresses.trim() + "\n" : "";
+                                                        if (!existing.includes(accounts[0])) {
+                                                            setBtcAddresses(existing + accounts[0]);
+                                                        }
+                                                    }
+                                                } catch (e: any) {
+                                                    setError("MetaMask connection failed: " + e.message);
+                                                }
+                                            } else {
+                                                setError("MetaMask is not installed in your browser.");
+                                            }
+                                        }}
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 36 36" fill="none" style={{ marginRight: 6 }}>
+                                            <path d="M34.5 7.1l-10.7-3.9-3.2 16.1 13.9-12.2" fill="#E17726" />
+                                            <path d="M1.5 7.1l10.7-3.9 3.2 16.1L1.5 7.1" fill="#E27625" />
+                                            <path d="M26.4 20L31 29l-11.8 5.6 1.7-18.4L26.4 20" fill="#E27625" />
+                                            <path d="M9.6 20L5 29l11.8 5.6-1.7-18.4L9.6 20" fill="#E27625" />
+                                            <path d="M13.2 12.8L18 5 22.8 12.8l-4.8 19-4.8-19" fill="#F6851B" />
+                                        </svg>
+                                        Connect MetaMask
+                                    </button>
+                                )}
+                            </div>
                             <textarea
                                 className="input input-mono"
                                 rows={5}
-                                placeholder={"bc1qxxx...\nbc1qyyy..."}
+                                placeholder={(assetType === "ETH" || assetType === "USDC") ? "0x123...456\n0xabc...def" : "bc1qxxx...\nbc1qyyy..."}
                                 value={btcAddresses}
                                 onChange={(e) => setBtcAddresses(e.target.value)}
                             />

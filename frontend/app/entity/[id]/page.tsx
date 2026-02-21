@@ -240,6 +240,11 @@ export default function EntityPage() {
     const RootStr = BigInt(entity.merkleRoot).toString(16);
     const rootDisplay = "0x" + RootStr.padStart(64, "0");
 
+    const nameParts = entity.name.split("|");
+    const displayName = nameParts[0];
+    const tokenName = nameParts[1] || "";
+    const networkName = nameParts[2] || "";
+
     return (
         <div className="page">
             <div className="container" style={{ paddingTop: 32, paddingBottom: 48 }}>
@@ -247,7 +252,14 @@ export default function EntityPage() {
                 <div className="flex items-center gap-2 mb-4 text-muted text-sm">
                     <Link href="/registry" style={{ color: "var(--text-muted)" }}>Registry</Link>
                     <span>/</span>
-                    <span>{entity.name}</span>
+                    <span>{displayName}</span>
+                    {tokenName && (
+                        <>
+                            <span>/</span>
+                            <span style={{ color: "var(--green)" }}>{tokenName}</span>
+                            <span>({networkName})</span>
+                        </>
+                    )}
                 </div>
 
                 {/* Header */}
@@ -255,7 +267,12 @@ export default function EntityPage() {
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <div>
                             <div className="flex items-center gap-3 mb-2">
-                                <h1 style={{ fontSize: 22, fontWeight: 700 }}>{entity.name}</h1>
+                                <h1 style={{ fontSize: 22, fontWeight: 700 }}>{displayName}</h1>
+                                {tokenName && (
+                                    <div className="badge" style={{ background: "var(--surface-3)", color: "var(--green)" }}>
+                                        {tokenName} • {networkName}
+                                    </div>
+                                )}
                                 <ProofStatusBadge status={entity.status} />
                             </div>
                             <div className="flex items-center gap-4 flex-wrap">
