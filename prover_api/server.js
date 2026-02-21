@@ -68,11 +68,14 @@ function sumToSats(balances) {
 function parseLiabilitiesCSV(csv) {
     const lines = (csv || '').split('\n')
         .map(l => l.trim())
-        .filter(l => l && !l.startsWith('#') && !l.toLowerCase().startsWith('customer'));
+        .filter(l => l && !l.startsWith('#'));
     let total = 0;
     for (const line of lines) {
         const parts = line.split(',');
-        total += Math.round(parseFloat(parts[1] || '0') * 1e8);
+        const val = parseFloat(parts[1] || '0');
+        if (!isNaN(val)) {
+            total += Math.round(val * 1e8);
+        }
     }
     return total;
 }

@@ -38,3 +38,6 @@ page.tsx.bak
 prover_api/prover.logcircuit/target/
 exectest/
 *.bin
+cairo-run
+release.tar.gz
+trace.bin
