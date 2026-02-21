@@ -11,9 +11,12 @@ app.use(express.json({ limit: '10mb' }));
 
 const CIRCUIT_DIR = path.join(__dirname, '..', 'circuit');
 
-// Scarb 2.16.0 binary path — works both locally (asdf) and on Railway (PATH)
+// Scarb 2.16.0 binary path
 const SCARB_LOCAL = '/Users/khalid/.asdf/installs/scarb/2.16.0/bin/scarb';
-const SCARB_BIN = fs.existsSync(SCARB_LOCAL) ? SCARB_LOCAL : 'scarb';
+const SCARB_DOCKER = '/usr/local/bin/scarb';
+const SCARB_BIN = fs.existsSync(SCARB_LOCAL)
+    ? SCARB_LOCAL
+    : (fs.existsSync(SCARB_DOCKER) ? SCARB_DOCKER : 'scarb');
 
 // ─── Async child process runner (no deadlock) ───────────────────────────────
 
