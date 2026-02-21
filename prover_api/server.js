@@ -21,12 +21,12 @@ const SCARB_BIN = fs.existsSync(SCARB_LOCAL) ? SCARB_LOCAL : 'scarb';
  * Run a shell command asynchronously, streaming stdout/stderr to console.
  * Returns a Promise that resolves with stdout string or rejects on non-zero exit.
  */
-function run(cmd) {
+function run(bin, args) {
     return new Promise((resolve, reject) => {
-        console.log(`  $ ${cmd}`);
-        const child = spawn(cmd, {
+        const cmdLog = `${bin} ${args.join(' ')}`;
+        console.log(`  $ ${cmdLog}`);
+        const child = spawn(bin, args, {
             cwd: CIRCUIT_DIR,
-            shell: true,
             env: process.env,
         });
 
@@ -49,7 +49,7 @@ function run(cmd) {
             if (code === 0) {
                 resolve(stdout.trim());
             } else {
-                const err = new Error(stderr.trim() || `Command failed (exit ${code}): ${cmd}`);
+                const err = new Error(stderr.trim() || `Command failed (exit ${code}): ${cmdLog}`);
                 err.stderr = stderr;
                 reject(err);
             }
@@ -121,10 +121,12 @@ app.post('/api/prove', async (req, res) => {
 
         // 1. Execute
         console.log('🏃 scarb execute...');
-        await run(
-            `${SCARB_BIN} execute --executable-name zkreserves ` +
-            `--arguments "${reservesSats},${liabilitiesSats}" --output standard`
-        );
+        await run(SCARB_BIN, [
+            'execute',
+            '--executable-name', 'zkreserves',
+            '--arguments', `${reservesSats},${liabilitiesSats}`,
+            '--output', 'standard'
+        ]);
 
         const execId = findLatestExecutionId();
         if (!execId) throw new Error('Could not find execution output after scarb execute');
@@ -132,7 +134,7 @@ app.post('/api/prove', async (req, res) => {
 
         // 2. Prove
         console.log('🔐 scarb prove (Stwo STARK)...');
-        await run(`${SCARB_BIN} prove --execution-id ${execId}`);
+        await run(SCARB_BIN, ['prove', '--execution-id', execId.toString()]);
 
         // 3. Read proof
         const proofPath = findProofFile(execId);
@@ -168,14 +170,14 @@ app.post('/api/verify', async (req, res) => {
 
         try {
             if (executionId) {
-                await run(`${SCARB_BIN} verify --execution-id ${executionId}`);
+                await run(SCARB_BIN, ['verify', '--execution-id', executionId.toString()]);
             } else {
                 // Write proof to temp file, verify, clean up
                 const tmpFile = `verify_${Date.now()}.json`;
                 const tmpPath = path.join(CIRCUIT_DIR, tmpFile);
                 fs.writeFileSync(tmpPath, starkProofBytecode);
                 try {
-                    await run(`${SCARB_BIN} verify --proof-file ${tmpFile}`);
+                    await run(SCARB_BIN, ['verify', '--proof-file', tmpFile]);
                 } finally {
                     if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
                 }
