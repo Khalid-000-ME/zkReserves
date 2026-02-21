@@ -1,5 +1,5 @@
 # zkReserves — Prover API
-# Uses Scarb 2.16.0 which ships with the Stwo STARK prover natively.
+# Uses Scarb 2.12.2 for stable Stwo STARK prover/verifier.
 # No Rust compilation, no Docker-in-Docker, no Python virtualenv needed.
 
 FROM node:20-bullseye-slim
@@ -8,8 +8,8 @@ FROM node:20-bullseye-slim
 RUN apt-get update && apt-get install -y curl bash coreutils jq \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Scarb 2.16.0 (bundled with Stwo prover + scarb-execute + scarb-prove + scarb-verify)
-ENV SCARB_VERSION=2.16.0
+# Install Scarb 2.12.2 (bundled with Stwo prover + scarb-execute + scarb-prove + scarb-verify)
+ENV SCARB_VERSION=2.12.2
 RUN curl -fsSL https://github.com/software-mansion/scarb/releases/download/v${SCARB_VERSION}/scarb-v${SCARB_VERSION}-x86_64-unknown-linux-gnu.tar.gz \
     | tar -xz -C /usr/local/bin --strip-components=2 scarb-v${SCARB_VERSION}-x86_64-unknown-linux-gnu/bin/
 
