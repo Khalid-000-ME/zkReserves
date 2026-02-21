@@ -5,38 +5,58 @@ set -e
 # TRUE ZK RUNNER
 # ==============================================================================
 # This script orchestrates the generation of an off-chain ZK-STARK proof 
-# using the native StarkWare cairo-run and stone-prover tools.
-# 
-# WARNING: Generating proofs requires massive compute resources (16GB+ RAM min).
+# using native cairo1-run and LambdaClass stone-prover.
 # ==============================================================================
 
-echo ">> COMPILING MAIN CIRCUIT TO SIERRA/CASM"
-# Compile the custom Cairo program representing our constraints 
+echo ">> WRITING PROVER CONFIGURATIONS..."
+cat << 'EOF' > cpu_air_params.json
+{
+    "field": "PrimeB",
+    "stark": {
+        "fri": {
+            "fri_step_list": [0, 4, 3],
+            "last_layer_degree_bound": 64,
+            "n_queries": 18,
+            "proof_of_work_bits": 24
+        },
+        "log_n_cosets": 4
+    }
+}
+EOF
+
+cat << 'EOF' > cpu_air_prover_config.json
+{
+    "constraint_polynomial_task_size": 256,
+    "n_out_of_memory_merkle_layers": 1,
+    "store_full_l_deform": false,
+    "table_prover_params": {
+        "table_n_tasks": 1
+    }
+}
+EOF
+
+echo ">> COMPILING MAIN CIRCUIT TO SIERRA..."
 scarb --release build
 
-# In an actual deployment, we extract the CASM JSON directly 
-CASM_FILE="target/release/zkreserves_circuit.casm.json"
+CASM_FILE="target/release/zkreserves_circuit.sierra.json"
 
 if [ ! -f "$CASM_FILE" ]; then
-    echo ">> [ERROR] CASM binary failed to compile. Please check circuit constraints."
+    echo ">> [ERROR] Sierra binary failed to compile. Please check circuit constraints."
     exit 1
 fi
 
-echo ">> GENERATING CAIRO TRACE AND MEMORY DUMP"
-# This step executes the program natively on the server and maps polynomial memory vectors
-# Input would typically be dynamically passed as a serialized array representing wallet/liability data.
-# Note: For massive liability trees, this command consumes massive CPU threads.
+echo ">> GENERATING CAIRO TRACE AND MEMORY DUMP (cairo1-run)..."
+# We use cairo1-run which accepts the sierra constraints natively
 cairo-run \
-  --program=$CASM_FILE \
-  --layout=all_cairo \
-  --trace_file=zkreserves_trace.bin \
-  --memory_file=zkreserves_memory.bin \
-  --proof_mode
+  $CASM_FILE \
+  --proof_mode \
+  --trace_file zkreserves_trace.bin \
+  --memory_file zkreserves_memory.bin \
+  --air_public_input public_input.json \
+  --args "private_input.json"
 
-echo ">> GENERATING MATHEMATICAL ZK-STARK ( STONE PROVER )"
-# Here we hook the traces into the heavy Lambdaclass STARK prover via Docker.
-# This mathematically seals the constraints without revealing private data.
-docker run --rm -v $(pwd):/work -w /work ghcr.io/lambdaclass/stone-prover:latest cpu_prover \
+echo ">> GENERATING MATHEMATICAL ZK-STARK ( STONE PROVER )" 
+cpu_prover \
   --parameter_file=cpu_air_params.json \
   --prover_config_file=cpu_air_prover_config.json \
   --public_input_file=public_input.json \
@@ -44,4 +64,3 @@ docker run --rm -v $(pwd):/work -w /work ghcr.io/lambdaclass/stone-prover:latest
   --out_file=stark_proof.json
 
 echo ">> PROOF GENERATED: stark_proof.json"
-echo ">> Your STARK Proof is now ready to be securely transmitted directly to the Starknet Core L1/L2 Verifier."
