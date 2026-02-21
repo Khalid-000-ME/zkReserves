@@ -7,8 +7,8 @@
 # Stage 1: Build robust trace execution engine (cairo1-run) from source!
 FROM rust:slim-bullseye AS trace-builder
 RUN apt-get update && apt-get install -y git
-# We natively compile cairo1-run since binary releases are unstable
-RUN cargo install --git https://github.com/lambdaclass/cairo-vm.git cairo1-run
+# We natively compile cairo1-run from a stable explicitly pinned release tag
+RUN cargo install --git https://github.com/lambdaclass/cairo-vm.git --tag v3.0.1 cairo1-run
 
 # Stage 2: Base Node.js image combined with STARK engines
 FROM node:20-bullseye-slim
