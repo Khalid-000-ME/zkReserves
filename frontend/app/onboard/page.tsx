@@ -127,7 +127,9 @@ export default function OnboardPage() {
         setLoading(true);
         setProgressSteps([]);
         try {
-            const felt = stringToFelt252(entityName.trim());
+            const network = assetType === "BTC" ? "Bitcoin" : assetType === "SOL" ? "Solana" : "Ethereum";
+            const fullEntityName = `${entityName.trim().substring(0, 10)}|${assetType}|${network}`;
+            const felt = stringToFelt252(fullEntityName);
             const registrant = walletAddress ? BigInt(walletAddress) : 0n;
             const entityIdBig = computeEntityId(felt, registrant);
             const entityIdHex = "0x" + entityIdBig.toString(16);
@@ -168,7 +170,9 @@ export default function OnboardPage() {
         setError("");
         setLoading(true);
         try {
-            const nameFelt = stringToFelt252(entityName.trim());
+            const network = assetType === "BTC" ? "Bitcoin" : assetType === "SOL" ? "Solana" : "Ethereum";
+            const fullEntityName = `${entityName.trim().substring(0, 10)}|${assetType}|${network}`;
+            const nameFelt = stringToFelt252(fullEntityName);
             const nameFeltHex = "0x" + nameFelt.toString(16);
             const calls = [
                 {
