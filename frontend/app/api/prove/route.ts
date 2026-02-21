@@ -5,8 +5,9 @@ export async function POST(req: Request) {
         const body = await req.json();
 
         const proverUrl = process.env.PROVER_API_URL || "http://127.0.0.1:8080";
+        const baseUrl = proverUrl.endsWith('/') ? proverUrl.slice(0, -1) : proverUrl;
         // Pass request natively through to the Express Prover API backend
-        const response = await fetch(`${proverUrl}/api/prove`, {
+        const response = await fetch(`${baseUrl}/api/prove`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
